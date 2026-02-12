@@ -113,7 +113,7 @@ def on_release(key):
         print("Sustain pedal OFF")
 
 # Run
-print("Fire Piano| SPACE = sustain | ESC = quit\n")
+print("Piano| SPACE = sustain | ESC = quit\n")
 
 stream = sd.OutputStream(
     samplerate=SAMPLE_RATE,
