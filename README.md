@@ -1,4 +1,4 @@
-# 🎹 Digital Signal Processing Piano
+#  Digital Signal Processing Piano
 ### Real-Time Digital Piano Synthesizer Built from First Principles (DSP Project)
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
