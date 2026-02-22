@@ -1,4 +1,4 @@
-# Digital Signal Processing PERSONAL PROJECT (Improved Piano Tone)
+# Digital Signal Processing PERSONAL PROJECT
 
 import numpy as np
 import sounddevice as sd
@@ -45,17 +45,17 @@ def synth_callback(outdata, frames, time_info, status):
             base_decay = BASE_DECAY * (DECAY_SCALING / (freq + DECAY_SCALING))
             decay = SUSTAIN_DECAY if sustain_active else base_decay
 
-            # --- Envelope (Attack + Decay) ---
+            # Envelope (Attack + Decay)
             attack = 0.008
             if age < attack:
                 envelope = age / attack
             else:
                 envelope = np.exp(-(age - attack) / decay)
 
-            # --- Phase ---
+            # Phase
             phase = note["phase"] + 2 * np.pi * freq * t
 
-            # --- Warmer Harmonic Structure ---
+            # Warmer Harmonic Structure
             wave = (
                     np.sin(phase)
                     + 0.25 * np.sin(2 * phase)
