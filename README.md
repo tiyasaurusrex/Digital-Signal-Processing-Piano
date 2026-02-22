@@ -1,4 +1,4 @@
-# 🎹 Digital Signal Processing Piano
+#  Digital Signal Processing Piano
 ### Real-Time Digital Piano Synthesizer Built from First Principles (DSP Project)
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
@@ -15,7 +15,7 @@ Every note is synthesized in real time using additive harmonic modeling and expo
 
 # Features
 
-##  Real-Time Audio Synthesis
+## Real-Time Audio Synthesis
 - Pure sine-wave-based generation
 - Additive harmonic synthesis
 - 44.1 kHz sample rate
