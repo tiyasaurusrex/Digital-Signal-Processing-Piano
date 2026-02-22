@@ -1,4 +1,4 @@
-# Digital Signal Processing PERSONAL PROJECT
+# Digital Signal Processing PERSONAL PROJECT (Improved Piano Tone)
 
 import numpy as np
 import sounddevice as sd
@@ -21,18 +21,17 @@ piano_freqs = {
     "C6": 1046.50
 }
 
-# Settings
 SAMPLE_RATE = 44100
-VOLUME = 0.45
-BASE_DECAY = 0.8        # natural fade
-SUSTAIN_DECAY = 2.0     # longer when pedal held
-DECAY_SCALING = 1800.0  # high notes fade faster
+VOLUME = 0.4
+BASE_DECAY = 1.0
+SUSTAIN_DECAY = 2.5
+DECAY_SCALING = 2000.0
 
 active_notes = {}
 sustain_active = False
+current_octave = 4
 lock = threading.Lock()
 
-# Audio callback
 def synth_callback(outdata, frames, time_info, status):
     t = np.arange(frames) / SAMPLE_RATE
     chunk = np.zeros(frames, dtype=np.float32)
@@ -40,97 +39,116 @@ def synth_callback(outdata, frames, time_info, status):
     finished = []
 
     with lock:
-        # Generate all notes in one go
         for freq, note in list(active_notes.items()):
             age = now - note["start_time"]
 
-            # Adaptive decay
             base_decay = BASE_DECAY * (DECAY_SCALING / (freq + DECAY_SCALING))
             decay = SUSTAIN_DECAY if sustain_active else base_decay
-            envelope = np.exp(-age / decay)
-            env_val = float(envelope if np.isscalar(envelope) else envelope[-1])
 
-            # Harmonic-rich wave
+            # --- Envelope (Attack + Decay) ---
+            attack = 0.008
+            if age < attack:
+                envelope = age / attack
+            else:
+                envelope = np.exp(-(age - attack) / decay)
+
+            # --- Phase ---
             phase = note["phase"] + 2 * np.pi * freq * t
-            wave = (np.sin(phase)
-                    + 0.6 * np.sin(2 * phase + 0.02)
-                    + 0.3 * np.sin(3 * phase + 0.03)) * envelope
+
+            # --- Warmer Harmonic Structure ---
+            wave = (
+                    np.sin(phase)
+                    + 0.25 * np.sin(2 * phase)
+                    + 0.1 * np.sin(3 * phase)
+                    + 0.03 * np.sin(4 * phase)
+                )
+
+            wave *= envelope
 
             chunk += wave
             note["phase"] = float(phase[-1] % (2 * np.pi))
 
-            # Drop finished notes
-            if env_val < 0.001 and not sustain_active:
+            if envelope < 0.0008 and not sustain_active:
                 finished.append(freq)
 
         for f in finished:
             active_notes.pop(f, None)
 
-    # Normalize once (outside loop)
     if active_notes:
         chunk *= VOLUME / np.sqrt(len(active_notes))
-    else:
-        chunk *= 0.0
 
     outdata[:] = chunk.reshape(-1, 1)
 
-#Key mapping
-key_to_note = {
-    # Lower octave (C3–E4)
-    'z': 'C3', 's': 'C#3', 'x': 'D3', 'd': 'D#3', 'c': 'E3',
-    'v': 'F3', 'g': 'F#3', 'b': 'G3', 'h': 'G#3', 'n': 'A3',
-    'j': 'A#3', 'm': 'B3', ',': 'C4', 'l': 'C#4', '.': 'D4',
-    ';': 'D#4', '/': 'E4',
 
-    # Upper octave (F4–E5)
-    'q': 'F4', '2': 'F#4', 'w': 'G4', '3': 'G#4', 'e': 'A4',
-    '4': 'A#4', 'r': 'B4', 't': 'C5', '6': 'C#5', 'y': 'D5',
-    '7': 'D#5', 'u': 'E5'
+# Note Layout
+key_to_note = {
+    'z': 'C',  's': 'C#',
+    'x': 'D',  'd': 'D#',
+    'c': 'E',
+    'v': 'F',  'g': 'F#',
+    'b': 'G',  'h': 'G#',
+    'n': 'A',  'j': 'A#',
+    'm': 'B'
 }
 
 
-# Keyboard events
 def on_press(key):
-    global sustain_active
+    global sustain_active, current_octave
+
     try:
         if key.char in key_to_note:
-            note = key_to_note[key.char]
-            freq = piano_freqs[note]
-            with lock:
-                active_notes[freq] = {"phase": 0.0, "start_time": time.perf_counter()}
+            note_name = key_to_note[key.char]
+            full_note = note_name + str(current_octave)
+
+            if full_note in piano_freqs:
+                freq = piano_freqs[full_note]
+                with lock:
+                    active_notes[freq] = {
+                        "phase": 0.0,
+                        "start_time": time.perf_counter()
+                    }
+
+        elif key.char in ['1','2','3','4','5','6']:
+            current_octave = int(key.char)
+            print(f"Octave = {current_octave}")
+
+        elif key.char == ']':
+            current_octave = min(6, current_octave + 1)
+            print(f"Octave = {current_octave}")
+
+        elif key.char == '[':
+            current_octave = max(1, current_octave - 1)
+            print(f"Octave = {current_octave}")
+
         elif key == keyboard.Key.space:
             sustain_active = True
-            print("Sustain pedal ON")
+
     except AttributeError:
         if key == keyboard.Key.esc:
-            print("\nPAUSE")
             return False
+
 
 def on_release(key):
     global sustain_active
     if key == keyboard.Key.space:
         sustain_active = False
-        print("Sustain pedal OFF")
 
-# Run
-print("Piano| SPACE = sustain | ESC = quit\n")
+
+print("Piano | 1–6 = octave | [ ] = shift | SPACE = sustain | ESC = quit")
 
 stream = sd.OutputStream(
     samplerate=SAMPLE_RATE,
     channels=1,
     dtype='float32',
     callback=synth_callback,
-    blocksize=4086,   #stability buffer
-    latency='high'
+    blocksize=2048,
+    latency='low'
 )
 
 stream.start()
+
 with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
     listener.join()
+
 stream.stop()
 stream.close()
-
-
-
-
-
