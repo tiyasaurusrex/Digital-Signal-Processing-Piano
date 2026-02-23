@@ -7,6 +7,8 @@
 ![DSP](https://img.shields.io/badge/Focus-Digital%20Signal%20Processing-purple)
 ![Status](https://img.shields.io/badge/Project-Active-brightgreen)
 
+readme to be updated shortly!!
+
 This is a real-time digital piano synthesizer built entirely using mathematical waveform generation — **no prerecorded samples, no sound engines, no MIDI libraries**.
 
 Every note is synthesized in real time using additive harmonic modeling and exponential decay envelopes, demonstrating practical applications of **Digital Signal Processing (DSP)** concepts.
